@@ -1,0 +1,102 @@
+-- Load Rayfield
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+-- Create Window
+local Window = Rayfield:CreateWindow({
+   Name = "LUX Hub ",
+   LoadingTitle = "Lux Hub Loading...",
+   LoadingSubtitle = "By Lux HUB 👑",
+   Theme = "Ocean",
+   ConfigurationSaving = {
+      Enabled = true,
+      FileName = "LuxHubSettings"
+   },
+})
+
+-- Create Tabs
+local CombatTab = Window:CreateTab("Combat", "crosshair")
+local MovementTab = Window:CreateTab("Movement", "move")
+local TeleportTab = Window:CreateTab("Teleport", "map")
+
+-- Auto Aim (OP!)
+local autoAimThread
+CombatTab:CreateToggle({
+   Name = "💥 OP Auto Aim",
+   CurrentValue = false,
+   Flag = "AutoAimToggle",
+   Callback = function(Value)
+      if Value then
+         autoAimThread = task.spawn(function()
+            while task.wait() do
+               pcall(function()
+                  local args = {
+                     [1] = workspace:WaitForChild("Levels"):WaitForChild("Level14"):WaitForChild("Train1"):WaitForChild("Union")
+                  }
+                  game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Fire"):FireServer(unpack(args))
+                  task.wait(0.000001)
+               end)
+            end
+         end)
+      else
+         if autoAimThread then
+            task.cancel(autoAimThread)
+         end
+      end
+   end,
+})
+
+-- Teleport to End
+TeleportTab:CreateButton({
+   Name = "🚀 Teleport to End",
+   Callback = function()
+      local character = game.Players.LocalPlayer.Character
+      if character then
+         character:PivotTo(CFrame.new(Vector3.new(-1979, 0, -20)))
+      end
+   end,
+})
+
+-- WalkSpeed Modifier
+MovementTab:CreateSlider({
+   Name = "🏃 WalkSpeed",
+   Range = {16, 100},
+   Increment = 1,
+   Suffix = "Speed",
+   CurrentValue = 16,
+   Flag = "WalkspeedSlider",
+   Callback = function(Value)
+      game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = Value
+   end,
+})
+
+-- Noclip Toggle
+local noclip = false
+MovementTab:CreateToggle({
+   Name = "🚧 Noclip",
+   CurrentValue = false,
+   Flag = "NoclipToggle",
+   Callback = function(Value)
+      noclip = Value
+      local RunService = game:GetService("RunService")
+      RunService.Stepped:Connect(function()
+         if noclip then
+            for _, v in pairs(game.Players.LocalPlayer.Character:GetDescendants()) do
+               if v:IsA("BasePart") and v.CanCollide then
+                  v.CanCollide = false
+               end
+            end
+         end
+      end)
+   end,
+})
+
+-- Fly using Infinite Yield
+MovementTab:CreateButton({
+   Name = "🕊️ Enable Fly (Infinite Yield)",
+   Callback = function()
+      loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
+   end,
+})
+
+-- Load saved config
+Rayfield:LoadConfiguration()
