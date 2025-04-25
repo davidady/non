@@ -7,6 +7,7 @@ local selectedPlayer = nil
 local hoverSelectEnabled = false
 local isControlling = false
 local originalCameraSubject = nil
+local targetPlayer = nil
 
 -- Utility function to get display name with crown
 local function getDisplayName(plr)
@@ -36,41 +37,41 @@ title.TextScaled = true
 -- Draggable GUI
 local dragging, dragStart, startPos
 mainFrame.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then
-		dragging = true
-		dragStart = input.Position
-		startPos = mainFrame.Position
-	end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = mainFrame.Position
+    end
 end)
 mainFrame.InputChanged:Connect(function(input)
-	if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-		local delta = input.Position - dragStart
-		mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-	end
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - dragStart
+        mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
 end)
 mainFrame.InputEnded:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
 end)
 
 -- Button function
 local function createButton(name, yPos, callback)
-	local button = Instance.new("TextButton", mainFrame)
-	button.Size = UDim2.new(0, 230, 0, 40)
-	button.Position = UDim2.new(0, 10, 0, yPos)
-	button.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-	button.TextColor3 = Color3.fromRGB(255, 255, 255)
-	button.Text = name
-	button.Font = Enum.Font.Gotham
-	button.TextSize = 18
-	button.TextScaled = true
-	button.MouseEnter:Connect(function()
-		button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-	end)
-	button.MouseLeave:Connect(function()
-		button.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-	end)
-	button.MouseButton1Click:Connect(callback)
-	return button
+    local button = Instance.new("TextButton", mainFrame)
+    button.Size = UDim2.new(0, 230, 0, 40)
+    button.Position = UDim2.new(0, 10, 0, yPos)
+    button.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    button.Text = name
+    button.Font = Enum.Font.Gotham
+    button.TextSize = 18
+    button.TextScaled = true
+    button.MouseEnter:Connect(function()
+        button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    end)
+    button.MouseLeave:Connect(function()
+        button.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+    end)
+    button.MouseButton1Click:Connect(callback)
+    return button
 end
 
 -- Player Selection Box
@@ -86,128 +87,129 @@ inputBox.TextScaled = true
 
 -- Hover Select Button
 createButton("Hover Select", 120, function()
-	hoverSelectEnabled = not hoverSelectEnabled
-	inputBox.Text = hoverSelectEnabled and "Hover Select Enabled" or "Hover Select Disabled"
+    hoverSelectEnabled = not hoverSelectEnabled
+    inputBox.Text = hoverSelectEnabled and "Hover Select Enabled" or "Hover Select Disabled"
 end)
 
 -- Auto-Stomp Toggle
 createButton("Auto-Stomp", 170, function()
-	loopingStomp = not loopingStomp
+    loopingStomp = not loopingStomp
 end)
 
 -- Auto-Zone Toggle
 createButton("Auto-Zone: Hacked Boxing", 220, function()
-	loopingZone = not loopingZone
+    loopingZone = not loopingZone
 end)
 
 -- Teleport Button
 createButton("Teleport to Location", 270, function()
-	player.Character.HumanoidRootPart.CFrame = CFrame.new(75, 40, 393)
+    player.Character.HumanoidRootPart.CFrame = CFrame.new(75, 40, 393)
 end)
 
 -- Fling target function
 local function flingTarget(targetPlayer)
-	if not targetPlayer or targetPlayer == player then return end
-	local char = player.Character
-	local hrp = char and char:FindFirstChild("HumanoidRootPart")
-	local tChar = targetPlayer.Character
-	local tHRP = tChar and tChar:FindFirstChild("HumanoidRootPart")
-	if hrp and tHRP then
-		hrp.CFrame = tHRP.CFrame + Vector3.new(0, 5, 0)
-		local bv = Instance.new("BodyVelocity", hrp)
-		bv.Velocity = Vector3.new(9999,9999,9999)
-		bv.MaxForce = Vector3.new(1e9,1e9,1e9)
-		game.Debris:AddItem(bv, 0.1)
-	end
+    if not targetPlayer or targetPlayer == player then return end
+    local char = player.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    local tChar = targetPlayer.Character
+    local tHRP = tChar and tChar:FindFirstChild("HumanoidRootPart")
+    if hrp and tHRP then
+        hrp.CFrame = tHRP.CFrame + Vector3.new(0, 5, 0)
+        local bv = Instance.new("BodyVelocity", hrp)
+        bv.Velocity = Vector3.new(9999,9999,9999)
+        bv.MaxForce = Vector3.new(1e9,1e9,1e9)
+        game.Debris:AddItem(bv, 0.1)
+    end
 end
 
 -- Control function
 local function controlTarget(targetPlayer)
-	if not targetPlayer or isControlling then return end
-	isControlling = true
-	local char = targetPlayer.Character
-	if char then
-		originalCameraSubject = workspace.CurrentCamera.CameraSubject
-		workspace.CurrentCamera.CameraSubject = char:FindFirstChild("Humanoid")
-		inputBox.Text = "Controlling " .. getDisplayName(targetPlayer)
-	end
+    if not targetPlayer or isControlling then return end
+    isControlling = true
+    local char = targetPlayer.Character
+    if char then
+        originalCameraSubject = workspace.CurrentCamera.CameraSubject
+        workspace.CurrentCamera.CameraSubject = char:FindFirstChild("Humanoid")
+        inputBox.Text = "Controlling " .. getDisplayName(targetPlayer)
+    end
 end
 
 -- Stop control
 local function stopControl()
-	if isControlling then
-		isControlling = false
-		workspace.CurrentCamera.CameraSubject = originalCameraSubject
-		inputBox.Text = "Stopped Control"
-	end
+    if isControlling then
+        isControlling = false
+        workspace.CurrentCamera.CameraSubject = originalCameraSubject
+        inputBox.Text = "Stopped Control"
+    end
 end
 
 -- Auto stomp logic
 task.spawn(function()
-	while true do
-		if loopingStomp and selectedPlayer and selectedPlayer.Name ~= "wrd2davi" then
-			local pos = selectedPlayer.Character and selectedPlayer.Character:FindFirstChild("HumanoidRootPart") and selectedPlayer.Character.HumanoidRootPart.Position
-			if pos then
-				game.ReplicatedStorage:WaitForChild("Events"):WaitForChild("Gameplay"):WaitForChild("HitStomp"):FireServer(pos, {selectedPlayer})
-			end
-		end
-		task.wait(1)
-	end
+    while true do
+        if loopingStomp and selectedPlayer and selectedPlayer.Name ~= "wrd2davi" then
+            local pos = selectedPlayer.Character and selectedPlayer.Character:FindFirstChild("HumanoidRootPart") and selectedPlayer.Character.HumanoidRootPart.Position
+            if pos then
+                game.ReplicatedStorage:WaitForChild("Events"):WaitForChild("Gameplay"):WaitForChild("HitStomp"):FireServer(pos, {selectedPlayer})
+            end
+        end
+        task.wait(1)
+    end
 end)
 
 -- Auto zone logic
 task.spawn(function()
-	while true do
-		if loopingZone then
-			game.ReplicatedStorage:WaitForChild("Events"):WaitForChild("Other"):WaitForChild("ChangeZoneIn"):FireServer("Hacked Boxing")
-		end
-		task.wait(1)
-	end
+    while true do
+        if loopingZone then
+            game.ReplicatedStorage:WaitForChild("Events"):WaitForChild("Other"):WaitForChild("ChangeZoneIn"):FireServer("Hacked Boxing")
+        end
+        task.wait(1)
+    end
 end)
 
 -- Hover select key
 game:GetService("UserInputService").InputBegan:Connect(function(input, gp)
-	if not gp and input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == Enum.KeyCode.P then
-		hoverSelectEnabled = true
-		inputBox.Text = "Hover over a player to select them"
-	end
+    if not gp and input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == Enum.KeyCode.P then
+        hoverSelectEnabled = true
+        inputBox.Text = "Hover over a player to select them"
+    end
 end)
 
 -- Mouse select
 mouse.Button1Down:Connect(function()
-	if hoverSelectEnabled then
-		local target = mouse.Target
-		if target then
-			local model = target:FindFirstAncestorOfClass("Model")
-			local plr = game.Players:GetPlayerFromCharacter(model)
-			if plr then
-				selectedPlayer = plr
-				inputBox.Text = getDisplayName(selectedPlayer)
-				hoverSelectEnabled = false
-			end
-		end
-	end
+    if hoverSelectEnabled then
+        local target = mouse.Target
+        if target then
+            local model = target:FindFirstAncestorOfClass("Model")
+            local plr = game.Players:GetPlayerFromCharacter(model)
+            if plr then
+                selectedPlayer = plr
+                inputBox.Text = getDisplayName(selectedPlayer)
+                hoverSelectEnabled = false
+            end
+        end
+    end
 end)
 
--- Chat commands
+-- Chat commands (ONLY wrd2davi can control others)
 player.Chatted:Connect(function(msg)
-	if player.Name ~= "wrd2davi" then return end
-	local args = msg:split(" ")
-	local cmd = args[1]
-	local targetName = args[2]
-	local targetPlayer = targetName and game.Players:FindFirstChild(targetName)
+    if player.Name ~= "wrd2davi" then return end  -- Only allow control if wrd2davi sends the command
+    
+    local args = msg:split(" ")
+    local cmd = args[1]
+    local targetName = args[2]
+    local targetPlayer = targetName and game.Players:FindFirstChild(targetName)
 
-	if cmd == ":fling" and targetPlayer then
-		flingTarget(targetPlayer)
-	elseif cmd == ":control" and targetPlayer then
-		controlTarget(targetPlayer)
-	elseif cmd == ":stop" then
-		stopControl()
-	elseif cmd == ":bring" and targetPlayer then
-		local myHRP = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-		local targetHRP = targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart")
-		if myHRP and targetHRP then
-			targetHRP.CFrame = myHRP.CFrame + Vector3.new(0, 5, 0)
-		end
-	end
+    if cmd == ":fling" and targetPlayer then
+        flingTarget(targetPlayer)
+    elseif cmd == ":control" and targetPlayer then
+        controlTarget(targetPlayer)
+    elseif cmd == ":stop" then
+        stopControl()
+    elseif cmd == ":bring" and targetPlayer then
+        local myHRP = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+        local targetHRP = targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if myHRP and targetHRP then
+            targetHRP.CFrame = myHRP.CFrame + Vector3.new(0, 5, 0)
+        end
+    end
 end)
